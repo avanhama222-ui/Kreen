@@ -75,6 +75,9 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
 .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .btn.pay{background:var(--debt);color:#fff;padding:8px 14px}
 .btn.small{padding:8px 12px}
+.linkbtn{background:none;border:1px dashed var(--debt);color:var(--debt);border-radius:10px;padding:10px;font:inherit;font-weight:700;cursor:pointer}
+.oldmode{border-color:var(--debt);box-shadow:0 0 0 2px var(--debt-soft)}
+.form-title{font-weight:700;color:var(--debt)}
 
 .shop{display:flex;flex-direction:column;padding:0;overflow:hidden}
 .shop-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
@@ -142,13 +145,17 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
         <button type="button" id="c-iqd" aria-pressed="true">دینار</button>
         <button type="button" id="c-usd" aria-pressed="false">دۆلار</button>
       </div>
-      <label class="check full"><input type="checkbox" id="f-debt"> بە قەرز (پارەکەم نەداوە)</label>
+      <label class="check full" id="debt-wrap"><input type="checkbox" id="f-debt"> بە قەرز (پارەکەم نەداوە)</label>
+      <label class="full" id="old-date-wrap" hidden>بەرواری قەرزەکە (ئەگەر بیرت نییە بەتاڵی بهێڵە)
+        <input id="f-olddate" type="date">
+      </label>
       <div class="stamp full" id="f-stamp"></div>
       <div class="actions full">
         <button class="btn primary" type="submit" id="f-save">زیادکردن</button>
         <button class="btn ghost" type="button" id="f-cancel" hidden>پاشگەزبوونەوە</button>
         <button class="btn ghost" type="button" id="f-del" hidden>سڕینەوە</button>
       </div>
+      <button class="linkbtn full" type="button" id="f-oldtoggle">+ زیادکردنی قەرزی کۆن (قەرزی پێش ئەم ئەپە)</button>
     </form>
   </section>
 
@@ -182,7 +189,9 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
   const dayOf = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   const today = () => dayOf(new Date());
   const timeOf = ts => { const d=new Date(ts); return pad(d.getHours())+':'+pad(d.getMinutes()); };
-  const whenText = r => r.date + (r.ts ? '  ' + timeOf(r.ts) : '');
+  const whenText = r => r.type==='old' ? (r.date || 'بەرواری نەزانراو') : r.date + (r.ts ? '  ' + timeOf(r.ts) : '');
+  const isBuy = r => r.type!=='pay' && r.type!=='old';
+  let oldMode = false;
   const K='kreen-rows', R='kreen-rate';
 
   let rows = [];   // {id, type:'buy'|'pay', shop, amount, currency, debt, date, ts}
@@ -204,7 +213,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
   function setCur(c){ cur=c; $('c-iqd').setAttribute('aria-pressed',c==='IQD'); $('c-usd').setAttribute('aria-pressed',c==='USD'); }
   $('c-iqd').onclick=()=>setCur('IQD'); $('c-usd').onclick=()=>setCur('USD');
 
-  function tickStamp(){ if(!editing) $('f-stamp').textContent = 'بەروار خۆی دادەنرێت: ' + today() + '  ' + timeOf(Date.now()); }
+  function tickStamp(){ if(oldMode && !editing){ $('f-stamp').textContent='ئەم قەرزە ناچێتە سەر کڕینی ئەمڕۆ، تەنها لە قەرزەکان دەردەکەوێت.'; return; } if(!editing) $('f-stamp').textContent = 'بەروار خۆی دادەنرێت: ' + today() + '  ' + timeOf(Date.now()); }
   setInterval(tickStamp, 30000);
 
   function setView(mode, date){
@@ -245,8 +254,9 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
   function rowEl(r, showDate){
     const it=el('div','item'+(r.type==='pay'?' payrow':'')); it.tabIndex=0; it.setAttribute('role','button');
     const w=el('span','when');
-    const t=el('span','num', showDate ? whenText(r) : timeOf(r.ts||0)); w.appendChild(t);
+    const t=el('span','num', (showDate || r.type==='old') ? whenText(r) : timeOf(r.ts||0)); w.appendChild(t);
     if(r.type==='pay') w.appendChild(el('span','tag ok','قەرز دراوەتەوە'));
+    else if(r.type==='old') w.appendChild(el('span','tag','قەرزی کۆن'));
     else if(r.debt) w.appendChild(el('span','tag','قەرز'));
     const a=el('span','amt num',(r.type==='pay'?'− ':'')+fmt(r.amount,r.currency));
     it.append(w,a);
@@ -296,7 +306,6 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
   function render(){
     const bal=balances();
     const total=$('total'), list=$('list'); list.textContent='';
-    $('formcard').hidden = view.mode==='debt';
     tickStamp();
 
     if(view.mode==='debt'){
@@ -329,7 +338,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
     let iqd=0, usd=0;
     const shops=new Map();
     for(const r of vis){
-      if(r.type!=='pay'){ if(r.currency==='USD') usd+=r.amount; else iqd+=r.amount; }
+      if(isBuy(r)){ if(r.currency==='USD') usd+=r.amount; else iqd+=r.amount; }
       if(!shops.has(r.shop)) shops.set(r.shop, []);
       shops.get(r.shop).push(r);
     }
@@ -346,7 +355,7 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
     }
     const sorted=[...shops.entries()].sort((a,b)=>Math.max(...b[1].map(r=>r.ts||0))-Math.max(...a[1].map(r=>r.ts||0)));
     for(const [shop, items] of sorted){
-      let sI=0,sU=0; items.forEach(r=>{ if(r.type!=='pay'){ if(r.currency==='USD') sU+=r.amount; else sI+=r.amount; } });
+      let sI=0,sU=0; items.forEach(r=>{ if(isBuy(r)){ if(r.currency==='USD') sU+=r.amount; else sI+=r.amount; } });
       const box=el('section','card shop');
       const head=el('div','shop-head');
       head.append(el('h2',null,shop), el('span','sub num',[sI?fmtIQD(sI):'', sU?fmtUSD(sU):''].filter(Boolean).join(' + ')||'—'));
@@ -365,18 +374,30 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
   }
 
   let delArmed=false;
+  function setOldMode(on){
+    oldMode=on;
+    $('formcard').classList.toggle('oldmode', on);
+    $('old-date-wrap').hidden=!on;
+    $('debt-wrap').hidden=on;
+    $('f-oldtoggle').textContent = on ? '← گەڕانەوە بۆ تۆمارکردنی کڕین' : '+ زیادکردنی قەرزی کۆن (قەرزی پێش ئەم ئەپە)';
+    if(!editing) $('f-save').textContent = on ? 'زیادکردنی قەرزی کۆن' : 'زیادکردن';
+    tickStamp();
+  }
+  $('f-oldtoggle').onclick=()=>{ const keep=$('f-shop').value; resetForm(); $('f-shop').value=keep; setOldMode(!oldMode); $('f-shop').focus(); };
   function resetForm(){
     $('f').reset(); editing=null; delArmed=false;
     $('f-save').textContent='زیادکردن'; $('f-cancel').hidden=true; $('f-del').hidden=true; $('f-del').textContent='سڕینەوە';
-    $('f-debt').closest('label').hidden=false;
-    tickStamp();
+    $('f-oldtoggle').hidden=false;
+    setOldMode(false);
   }
   function startEdit(r){
     if(view.mode==='debt'){ setView('all'); }
     editing=r.id; delArmed=false;
+    setOldMode(r.type==='old'); $('f-oldtoggle').hidden=true;
     $('f-shop').value=r.shop; $('f-price').value=r.amount; $('f-debt').checked=!!r.debt; setCur(r.currency||'IQD');
-    $('f-debt').closest('label').hidden = r.type==='pay';
-    $('f-stamp').textContent = (r.type==='pay'?'پارەدان · ':'') + whenText(r);
+    $('f-olddate').value = r.type==='old' ? (r.date||'') : '';
+    $('debt-wrap').hidden = r.type==='pay' || r.type==='old';
+    $('f-stamp').textContent = (r.type==='pay'?'پارەدان · ':r.type==='old'?'قەرزی کۆن · ':'') + whenText(r);
     $('f-save').textContent='پاشەکەوتکردن'; $('f-cancel').hidden=false; $('f-del').hidden=false; $('f-del').textContent='سڕینەوە';
     window.scrollTo({top:$('f').getBoundingClientRect().top+window.scrollY-80, behavior:'smooth'});
   }
@@ -392,10 +413,19 @@ input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid 
     if(!shop || !(amount>0)){ toast('ناو و نرخی کڕین پێویستن'); return; }
     if(editing){
       const r=rows.find(x=>x.id===editing);
-      if(r){ r.shop=shop; r.amount=amount; r.currency=cur; if(r.type!=='pay') r.debt=$('f-debt').checked; }
+      if(r){ r.shop=shop; r.amount=amount; r.currency=cur;
+        if(r.type==='old'){ r.date=$('f-olddate').value||''; }
+        else if(r.type!=='pay') r.debt=$('f-debt').checked; }
       persist(); resetForm(); render(); toast('گۆڕانکاری پاشەکەوت کرا'); return;
     }
     const now=Date.now();
+    if(oldMode){
+      const od=$('f-olddate').value||'';
+      rows.push({id:'o'+now.toString(36)+Math.random().toString(36).slice(2,6), type:'old', shop, amount, currency:cur, debt:true, date:od, ts: od ? Date.parse(od+'T12:00:00') : 0});
+      persist(); const keepCur=cur; resetForm(); setCur(keepCur);
+      setView('debt'); toast('قەرزی کۆن زیاد کرا بۆ '+shop);
+      return;
+    }
     rows.push({id:'b'+now.toString(36)+Math.random().toString(36).slice(2,6), type:'buy', shop, amount, currency:cur, debt:$('f-debt').checked, date: view.mode==='pick' ? view.date : today(), ts:now});
     persist();
     const keepCur=cur; resetForm(); setCur(keepCur);
