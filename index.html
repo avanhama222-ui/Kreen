@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ckb" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6b4f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="کڕین">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+<title>حسابی کڕینی دوکان</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&family=Noto+Kufi+Arabic:wght@700;800&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout: one column, phone-first ledger. Running total on top, entry form, then purchases grouped by shop. */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --ink:#1d2a24; --muted:#66746c; --line:#dde3dd;
+  --accent:#1f6b4f; --accent-ink:#ffffff; --accent-soft:#e2efe8;
+  --debt:#b4492c; --debt-soft:#f8e6df;
+  --f-display:"Noto Kufi Arabic","Vazirmatn",Tahoma,sans-serif;
+  --f-body:"Vazirmatn",Tahoma,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121815; --surface:#1a221e; --ink:#e6ece8; --muted:#97a59d; --line:#2c3732;
+  --accent:#5bbf94; --accent-ink:#0d1712; --accent-soft:#1f3329;
+  --debt:#ec8a6c; --debt-soft:#3a2219; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121815; --surface:#1a221e; --ink:#e6ece8; --muted:#97a59d; --line:#2c3732;
+  --accent:#5bbf94; --accent-ink:#0d1712; --accent-soft:#1f3329;
+  --debt:#ec8a6c; --debt-soft:#3a2219; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:16px 48px;display:flex;flex-direction:column;gap:16px}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+
+header.top{display:flex;flex-direction:column;gap:12px}
+h1{font-family:var(--f-display);font-size:1.35rem;margin:0;text-wrap:balance}
+.days{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;font-size:.9rem;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip input{border:0;background:transparent;color:inherit;font:inherit}
+input[type=date].chip{padding:5px 10px}
+
+.total{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.total .lbl{font-size:.85rem;opacity:.85}
+.total .big{font-family:var(--f-display);font-size:1.9rem;line-height:1.2}
+.total .row{display:flex;gap:16px;flex-wrap:wrap;font-size:.9rem}
+.total .row b{font-weight:700}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+form .full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted);min-width:0}
+input,select{font:inherit;font-size:1rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--bg);color:var(--ink);font:inherit;padding:10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.check{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:.95rem}
+.check input{width:20px;height:20px;accent-color:var(--debt)}
+.line-total{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;color:var(--muted)}
+.line-total b{color:var(--ink);font-size:1.1rem}
+.actions{display:flex;gap:8px}
+.btn{border:0;border-radius:10px;padding:12px 16px;font:inherit;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);flex:1}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+
+.shop{display:flex;flex-direction:column;gap:0;padding:0;overflow:hidden}
+.shop-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
+.shop-head h2{margin:0;font-size:1.05rem;font-family:var(--f-display);min-width:0;overflow-wrap:anywhere}
+.shop-head .sub{font-weight:700;white-space:nowrap}
+.item{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+.item:last-child{border-bottom:0}
+.item:hover{background:var(--bg)}
+.item .name{font-weight:500;min-width:0;overflow-wrap:anywhere}
+.item .amt{font-weight:700;text-align:left}
+.item .meta{color:var(--muted);font-size:.82rem;grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tag{background:var(--debt-soft);color:var(--debt);border-radius:6px;padding:0 8px;font-size:.78rem;font-weight:700}
+.shop-foot{display:flex;justify-content:space-between;padding:8px 16px;font-size:.85rem;color:var(--debt);background:var(--debt-soft)}
+
+.empty{text-align:center;color:var(--muted);padding:28px 16px}
+.empty b{display:block;color:var(--ink);font-size:1.05rem;margin-bottom:4px}
+.note{font-size:.8rem;color:var(--muted);text-align:center}
+.rate{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.rate input{width:9em;padding:6px 10px}
+.backup{display:flex;flex-direction:column;gap:10px}
+.b-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.toast{position:fixed;inset-inline:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));margin:auto;max-width:400px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+@media (max-width:380px){form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="wrap" dir="rtl" lang="ckb">
+  <header class="top">
+    <h1>حسابی کڕینی دوکان</h1>
+    <div class="days" role="group" aria-label="ڕۆژ">
+      <button class="chip" id="d-today" aria-pressed="true">ئەمڕۆ</button>
+      <button class="chip" id="d-all" aria-pressed="false">هەموو ڕۆژەکان</button>
+      <input class="chip" type="date" id="d-pick" aria-label="ڕۆژێک هەڵبژێرە">
+    </div>
+  </header>
+
+  <section class="total" aria-live="polite">
+    <span class="lbl" id="t-label">کۆی کڕینی ئەمڕۆ</span>
+    <span class="big num" id="t-iqd">0 IQD</span>
+    <div class="row">
+      <span>دۆلار: <b class="num" id="t-usd">$0</b></span>
+      <span>قەرز ماوە: <b class="num" id="t-debt">0</b></span>
+      <span>جێگا: <b class="num" id="t-shops">0</b></span>
+    </div>
+    <span class="lbl" id="t-combined" hidden></span>
+  </section>
+
+  <section class="card">
+    <form id="f" autocomplete="off">
+      <label class="full">جێگا / دوکان
+        <input id="f-shop" list="shops" required placeholder="بۆ نموونە: کۆگای حاجی ئەحمەد">
+        <datalist id="shops"></datalist>
+      </label>
+      <label class="full">کاڵا
+        <input id="f-item" list="items" required placeholder="بۆ نموونە: شەکر ٥٠ کیلۆ">
+        <datalist id="items"></datalist>
+      </label>
+      <label>ژمارە
+        <input id="f-qty" type="number" inputmode="decimal" min="0" step="any" value="1" required>
+      </label>
+      <label>نرخی دانە
+        <input id="f-price" type="number" inputmode="decimal" min="0" step="any" required placeholder="0">
+      </label>
+      <div class="full">
+        <div class="seg" role="group" aria-label="دراو">
+          <button type="button" id="c-iqd" aria-pressed="true">دینار</button>
+          <button type="button" id="c-usd" aria-pressed="false">دۆلار</button>
+        </div>
+      </div>
+      <label class="check full"><input type="checkbox" id="f-debt"> بە قەرز کڕیم (پارەکەم نەداوە)</label>
+      <div class="line-total full"><span>کۆی ئەم کاڵایە</span><b class="num" id="f-sum">0 IQD</b></div>
+      <div class="actions full">
+        <button class="btn primary" type="submit" id="f-save">زیادکردن</button>
+        <button class="btn ghost" type="button" id="f-cancel" hidden>پاشگەزبوونەوە</button>
+        <button class="btn ghost" type="button" id="f-del" hidden>سڕینەوە</button>
+      </div>
+    </form>
+  </section>
+
+  <div id="list" style="display:flex;flex-direction:column;gap:12px"></div>
+
+  <div class="rate">
+    <span>نرخی دۆلار (بۆ کۆکردنەوەی هەردوو دراو):</span>
+    <input id="rate" class="num" type="number" inputmode="numeric" min="0" placeholder="بۆ نموونە 1450">
+    <span>دینار بۆ ١ دۆلار</span>
+  </div>
+  <section class="card backup">
+    <div class="b-head"><b>باکئەپ</b><span class="note" id="b-last">هێشتا باکئەپت نەگرتووە</span></div>
+    <p class="note" style="text-align:start;margin:0">زانیارییەکان تەنها لەناو ئەم مۆبایلەدان. هەفتەی جارێک باکئەپ بگرە و فایلەکە لە شوێنێکی سەلامەتدا هەڵبگرە (بۆ نموونە بۆ خۆتی بنێرە لە WhatsApp یان Telegram).</p>
+    <div class="actions">
+      <button class="btn primary" type="button" id="b-export">گرتنی باکئەپ</button>
+      <button class="btn ghost" type="button" id="b-import">گەڕاندنەوەی باکئەپ</button>
+      <input type="file" id="b-file" accept=".json,application/json" hidden>
+    </div>
+  </section>
+  <p class="note" id="status">زانیارییەکان لەناو ئەم مۆبایلەدا پاشەکەوت دەکرێن.</p>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const fmtIQD = n => Math.round(n).toLocaleString('en-US') + ' IQD';
+  const fmtUSD = n => '$' + (Math.round(n*100)/100).toLocaleString('en-US');
+  const fmt = (n,c) => c==='USD' ? fmtUSD(n) : fmtIQD(n);
+  const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+
+  let rows = [];          // all purchases
+  let view = {mode:'today', date: today()};
+  let cur = 'IQD';
+  let editing = null;     // id being edited
+  let rate = 0;
+  let store = null;       // {save(row), remove(id), saveRate(n)}
+
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('show'),1800); }
+
+  function setCur(c){ cur=c; $('c-iqd').setAttribute('aria-pressed',c==='IQD'); $('c-usd').setAttribute('aria-pressed',c==='USD'); updSum(); }
+  $('c-iqd').onclick=()=>setCur('IQD'); $('c-usd').onclick=()=>setCur('USD');
+  function updSum(){ const q=parseFloat($('f-qty').value)||0, p=parseFloat($('f-price').value)||0; $('f-sum').textContent=fmt(q*p,cur); }
+  $('f-qty').oninput=updSum; $('f-price').oninput=updSum;
+
+  function setView(mode, date){
+    view={mode, date: date||view.date};
+    $('d-today').setAttribute('aria-pressed', mode==='today');
+    $('d-all').setAttribute('aria-pressed', mode==='all');
+    $('d-pick').setAttribute('aria-pressed', mode==='pick');
+    render();
+  }
+  $('d-today').onclick=()=>{ $('d-pick').value=''; setView('today', today()); };
+  $('d-all').onclick=()=>{ $('d-pick').value=''; setView('all'); };
+  $('d-pick').onchange=e=>{ if(e.target.value) setView('pick', e.target.value); };
+
+  function visible(){
+    if(view.mode==='all') return rows;
+    const d = view.mode==='today' ? today() : view.date;
+    return rows.filter(r=>r.date===d);
+  }
+
+  function render(){
+    const vis = visible();
+    const lbl = view.mode==='all' ? 'کۆی هەموو کڕینەکان' : view.mode==='today' ? 'کۆی کڕینی ئەمڕۆ' : 'کۆی کڕینی ' + view.date;
+    $('t-label').textContent = lbl;
+    let iqd=0, usd=0, dI=0, dU=0;
+    const shops = new Map();
+    for(const r of vis){
+      const s = r.qty*r.price;
+      if(r.currency==='USD'){ usd+=s; if(r.debt) dU+=s; } else { iqd+=s; if(r.debt) dI+=s; }
+      if(!shops.has(r.shop)) shops.set(r.shop, []);
+      shops.get(r.shop).push(r);
+    }
+    $('t-iqd').textContent=fmtIQD(iqd);
+    $('t-usd').textContent=fmtUSD(usd);
+    $('t-debt').textContent = (dI||!dU ? fmtIQD(dI) : '') + (dU ? (dI?' + ':'') + fmtUSD(dU) : '');
+    $('t-shops').textContent=shops.size;
+    const comb=$('t-combined');
+    if(rate>0 && usd>0){ comb.hidden=false; comb.textContent='هەمووی بە دینار: ' + fmtIQD(iqd + usd*rate); } else comb.hidden=true;
+
+    const list=$('list'); list.textContent='';
+    if(!vis.length){
+      const e=document.createElement('div'); e.className='card empty';
+      e.innerHTML='<b>هیچ کڕینێک تۆمار نەکراوە</b>ناوی دوکان، کاڵا و نرخەکە لە سەرەوە بنووسە و «زیادکردن» دابگرە.';
+      list.appendChild(e);
+    }
+    const sorted=[...shops.entries()].sort((a,b)=>Math.max(...b[1].map(r=>r.ts))-Math.max(...a[1].map(r=>r.ts)));
+    for(const [shop, items] of sorted){
+      let sI=0,sU=0,sdI=0,sdU=0;
+      items.forEach(r=>{const s=r.qty*r.price; if(r.currency==='USD'){sU+=s; if(r.debt) sdU+=s;} else {sI+=s; if(r.debt) sdI+=s;}});
+      const box=document.createElement('section'); box.className='card shop';
+      const head=document.createElement('div'); head.className='shop-head';
+      const h=document.createElement('h2'); h.textContent=shop;
+      const sub=document.createElement('span'); sub.className='sub num'; sub.textContent=[sI?fmtIQD(sI):'', sU?fmtUSD(sU):''].filter(Boolean).join(' + ')||fmtIQD(0);
+      head.append(h,sub); box.appendChild(head);
+      items.sort((a,b)=>b.ts-a.ts).forEach(r=>{
+        const it=document.createElement('div'); it.className='item'; it.tabIndex=0; it.setAttribute('role','button');
+        const n=document.createElement('span'); n.className='name'; n.textContent=r.item;
+        const a=document.createElement('span'); a.className='amt num'; a.textContent=fmt(r.qty*r.price, r.currency);
+        const m=document.createElement('span'); m.className='meta';
+        const q=document.createElement('span'); q.className='num'; q.textContent=r.qty.toLocaleString('en-US')+' × '+fmt(r.price,r.currency);
+        m.appendChild(q);
+        if(view.mode==='all'){ const d=document.createElement('span'); d.className='num'; d.textContent=r.date; m.appendChild(d); }
+        if(r.debt){ const t=document.createElement('span'); t.className='tag'; t.textContent='قەرز'; m.appendChild(t); }
+        it.append(n,a,m);
+        it.onclick=()=>startEdit(r);
+        it.onkeydown=e=>{ if(e.key==='Enter') startEdit(r); };
+        box.appendChild(it);
+      });
+      if(sdI||sdU){
+        const f=document.createElement('div'); f.className='shop-foot';
+        const a=document.createElement('span'); a.textContent='قەرزی ئەم دوکانە';
+        const b=document.createElement('b'); b.className='num'; b.textContent=[sdI?fmtIQD(sdI):'', sdU?fmtUSD(sdU):''].filter(Boolean).join(' + ');
+        f.append(a,b); box.appendChild(f);
+      }
+      list.appendChild(box);
+    }
+    // suggestions
+    const fill=(id,vals)=>{ const dl=$(id); dl.textContent=''; [...new Set(vals)].slice(0,60).forEach(v=>{const o=document.createElement('option'); o.value=v; dl.appendChild(o);}); };
+    const byRecent=[...rows].sort((a,b)=>b.ts-a.ts);
+    fill('shops', byRecent.map(r=>r.shop)); fill('items', byRecent.map(r=>r.item));
+  }
+
+  let delArmed=false;
+  function resetForm(keepShop){
+    const shop=$('f-shop').value;
+    $('f').reset(); $('f-qty').value='1';
+    if(keepShop) $('f-shop').value=shop;
+    editing=null; delArmed=false;
+    $('f-save').textContent='زیادکردن'; $('f-cancel').hidden=true; $('f-del').hidden=true; $('f-del').textContent='سڕینەوە';
+    updSum();
+  }
+  function startEdit(r){
+    editing=r.id; delArmed=false;
+    $('f-shop').value=r.shop; $('f-item').value=r.item; $('f-qty').value=r.qty; $('f-price').value=r.price;
+    $('f-debt').checked=!!r.debt; setCur(r.currency||'IQD');
+    $('f-save').textContent='پاشەکەوتکردن'; $('f-cancel').hidden=false; $('f-del').hidden=false; $('f-del').textContent='سڕینەوە';
+    window.scrollTo({top:$('f').getBoundingClientRect().top+window.scrollY-80, behavior:'smooth'});
+  }
+  $('f-cancel').onclick=()=>resetForm(false);
+  $('f-del').onclick=async()=>{
+    if(!delArmed){ delArmed=true; $('f-del').textContent='دڵنیای؟ دووبارە دابگرە'; return; }
+    const id=editing; resetForm(false);
+    try{ await store.remove(id); toast('سڕایەوە'); }catch(e){ toast('نەسڕایەوە، دووبارە هەوڵ بدەرەوە'); }
+  };
+
+  $('f').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const shop=$('f-shop').value.trim(), item=$('f-item').value.trim();
+    const qty=parseFloat($('f-qty').value), price=parseFloat($('f-price').value);
+    if(!shop||!item||!(qty>0)||!(price>=0)){ toast('ناوی دوکان، کاڵا، ژمارە و نرخ پێویستن'); return; }
+    const old = editing ? rows.find(r=>r.id===editing) : null;
+    const row = {
+      id: editing || ('p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
+      shop, item, qty, price, currency:cur, debt:$('f-debt').checked,
+      date: old ? old.date : (view.mode==='pick' ? view.date : today()),
+      ts: old ? old.ts : Date.now()
+    };
+    const wasEdit=!!editing;
+    resetForm(true);
+    $('f-item').focus();
+    try{ await store.save(row); toast(wasEdit?'گۆڕانکاری پاشەکەوت کرا':'زیاد کرا'); }catch(err){ toast('پاشەکەوت نەکرا، دووبارە هەوڵ بدەرەوە'); }
+  });
+
+  let rateTimer;
+  $('rate').addEventListener('input', e=>{
+    rate=parseFloat(e.target.value)||0; render();
+    clearTimeout(rateTimer); rateTimer=setTimeout(()=>{ store && store.saveRate(rate).catch(()=>{}); }, 800);
+  });
+
+  // ---------- storage ----------
+  function localStore(){
+    const K='kreen-rows', R='kreen-rate';
+    try{ rows=JSON.parse(localStorage.getItem(K)||'[]'); rate=parseFloat(localStorage.getItem(R))||0; }catch(e){ rows=[]; }
+    const persist=()=>{ try{ localStorage.setItem(K, JSON.stringify(rows)); }catch(e){} };
+    return {
+      async save(r){ const i=rows.findIndex(x=>x.id===r.id); if(i>=0) rows[i]=r; else rows.push(r); persist(); render(); },
+      async remove(id){ rows=rows.filter(x=>x.id!==id); persist(); render(); },
+      async saveRate(n){ try{ localStorage.setItem(R, String(n)); }catch(e){} }
+    };
+  }
+
+  function boot(){
+    store=localStore();
+    if(rate) $('rate').value=rate;
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+    showLast();
+    render();
+  }
+
+  // ---------- backup ----------
+  function showLast(){
+    let t=null; try{ t=localStorage.getItem('kreen-lastbackup'); }catch(e){}
+    $('b-last').textContent = t ? 'دوایین باکئەپ: ' + t : 'هێشتا باکئەپت نەگرتووە';
+  }
+  $('b-export').onclick=async()=>{
+    const data=JSON.stringify({app:'kreen',version:1,exported:new Date().toISOString(),rate,rows},null,1);
+    const name='kreen-backup-'+today()+'.json';
+    const blob=new Blob([data],{type:'application/json'});
+    let done=false;
+    try{
+      const file=new File([blob],name,{type:'application/json'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:name}); done=true; }
+    }catch(e){ if(e && e.name==='AbortError') return; }
+    if(!done){
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    }
+    try{ localStorage.setItem('kreen-lastbackup', today()); }catch(e){}
+    showLast(); toast('باکئەپ ئامادە بوو');
+  };
+  let importArmed=null;
+  $('b-import').onclick=()=>$('b-file').click();
+  $('b-file').onchange=async e=>{
+    const f=e.target.files[0]; e.target.value=''; if(!f) return;
+    try{
+      const j=JSON.parse(await f.text());
+      if(!j || !Array.isArray(j.rows)) throw 0;
+      // merge: keep existing, add/replace by id
+      const map=new Map(rows.map(r=>[r.id,r]));
+      j.rows.forEach(r=>{ if(r && r.id && r.shop && r.item) map.set(r.id,r); });
+      rows=[...map.values()];
+      try{ localStorage.setItem('kreen-rows', JSON.stringify(rows)); }catch(e){}
+      if(j.rate && !rate){ rate=Number(j.rate)||0; $('rate').value=rate||''; try{ localStorage.setItem('kreen-rate', String(rate)); }catch(e){} }
+      render(); toast(j.rows.length+' تۆمار گەڕایەوە');
+    }catch(err){ toast('ئەم فایلە باکئەپی ئەم ئەپە نییە'); }
+  };
+
+  if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+
+  boot();
+})();
+</script>
+</body>
+</html>
