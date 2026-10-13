@@ -133,6 +133,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
 .seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .seg.paytype button[aria-pressed="true"].isdebt{background:var(--debt-bg);color:var(--red);box-shadow:inset 0 0 0 2px var(--red)}
 .seg.paytype button[aria-pressed="true"].iscash{background:var(--cash-bg);color:var(--green);box-shadow:inset 0 0 0 2px var(--green)}
+.curlock{display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:14px;padding:11px;font-weight:700;color:var(--ink)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .hint{font-size:.82rem;color:var(--muted);text-align:center;margin:4px 0 12px}
 .link{background:none;border:0;color:var(--brand-2);font-weight:700;cursor:pointer;padding:6px;display:block;margin:6px auto 0}
@@ -190,6 +191,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     </div>
     <div class="two" style="margin-bottom:14px">
       <div class="seg" id="cur-seg"><button type="button" data-c="IQD" aria-pressed="true">دینار</button><button type="button" data-c="USD" aria-pressed="false">دۆلار</button></div>
+      <div class="curlock" id="cur-lock" hidden></div>
       <div class="seg paytype" id="pay-seg"><button type="button" class="iscash" data-d="0" aria-pressed="true">نەقد</button><button type="button" class="isdebt" data-d="1" aria-pressed="false">قەرز</button></div>
     </div>
     <div class="field" id="old-date" hidden>
@@ -251,6 +253,8 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     return best; // null = no debt, '0' = undated old debt, else YYYY-MM-DD
   }
   function debtAge(d){ if(d==='0') return 'قەرزی کۆن'; const n=Math.round((Date.parse(today())-Date.parse(d))/864e5); return n<=0?'قەرزی ئەمڕۆ':n===1?'قەرزی دوێنێ':n+' ڕۆژە قەرزە'; }
+  // each shop keeps one currency: the currency of its very first entry
+  function shopCur(name){ let f=null; for(const r of rows){ if(r.shop!==name) continue; if(!f||(r.ts||0)<(f.ts||0)) f=r; } return f?f.currency:null; }
   function names(){ const m=new Map(); rows.forEach(r=>m.set(r.shop,Math.max(m.get(r.shop)||0,r.ts||0))); return [...m.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]); }
   function totalDebt(){ let i=0,u=0; names().forEach(n=>{const s=summary(n); i+=s.owe.IQD; u+=s.owe.USD;}); return {i,u}; }
 
@@ -494,7 +498,8 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     if(payCtx) form.cur=payCtx.cur;
     setSeg('cur-seg','c',form.cur); setSeg('pay-seg','d',form.debt?1:0);
     $('f-shop').readOnly=!!payCtx;
-    renderNames(); showSheet();
+    baseHint=$('f-hint').textContent;
+    renderNames(); syncCur(); showSheet();
     if(!r && !payCtx) setTimeout(()=>($('f-shop').value?$('f-amt'):$('f-shop')).focus(),260);
   }
   $('fab').onclick=()=>openForm(null);
@@ -504,17 +509,29 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     openForm(null,{pay:{shop:n, cur, amount: cur==='IQD'?Math.round(s.owe.IQD):s.owe.USD, oweText: both(s.owe.IQD,s.owe.USD), s}});
   }
 
+  let baseHint='';
+  function syncCur(){
+    if(payCtx){ $('cur-seg').hidden=true; $('cur-lock').hidden=false; $('cur-lock').textContent=form.cur==='USD'?'دۆلار':'دینار'; return; }
+    const name=$('f-shop').value.trim();
+    // when editing, the row itself doesn't count if it's the shop's only entry
+    const others=rows.filter(r=>r.shop===name && r.id!==form.editing);
+    const c = others.length ? shopCur(name) : null;
+    if(c){ form.cur=c; $('cur-seg').hidden=true; $('cur-lock').hidden=false; $('cur-lock').textContent='حسابی '+(c==='USD'?'دۆلار':'دینار');
+      $('f-hint').textContent=baseHint; }
+    else { $('cur-seg').hidden=false; $('cur-lock').hidden=true; setSeg('cur-seg','c',form.cur);
+      $('f-hint').textContent = name && !form.editing ? 'دوکانی نوێیە: دینار یان دۆلار هەڵبژێرە. ئیتر هەموو حسابی ئەم دوکانە بەو دراوە دەبێت.' : baseHint; }
+  }
   function renderNames(){
     const box=$('names'); box.textContent='';
     if(payCtx || form.editing) return;
     const q=$('f-shop').value.trim();
     names().filter(n=>!q||n.includes(q)).slice(0,30).forEach(n=>{
       const b=el('button','nchip'+(n===q?' sel':''),n); b.type='button';
-      b.onclick=()=>{ $('f-shop').value=n; renderNames(); $('f-amt').focus(); };
+      b.onclick=()=>{ $('f-shop').value=n; renderNames(); syncCur(); $('f-amt').focus(); };
       box.appendChild(b);
     });
   }
-  $('f-shop').addEventListener('input',renderNames);
+  $('f-shop').addEventListener('input',()=>{ renderNames(); syncCur(); });
 
   $('f-del').onclick=()=>{
     if(!delArmed){ delArmed=true; $('f-del').textContent='دڵنیای؟'; return; }
@@ -526,6 +543,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const name=$('f-shop').value.trim(), amount=parseFloat($('f-amt').value);
     if(!name){ toast('ناوی دوکان بنووسە'); $('f-shop').focus(); return; }
     if(!(amount>0)){ toast('بڕی پارە بنووسە'); $('f-amt').focus(); return; }
+    if(!payCtx){ const others=rows.filter(r=>r.shop===name && r.id!==form.editing); if(others.length) form.cur=shopCur(name); }
     const now=Date.now(), id=()=>now.toString(36)+Math.random().toString(36).slice(2,6);
     if(form.editing){
       const r=rows.find(x=>x.id===form.editing);
