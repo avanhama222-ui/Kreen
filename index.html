@@ -273,6 +273,8 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   function empty(t,s){ const c=el('div','card'); const e=el('div','empty'); e.appendChild(el('b',null,t)); if(s) e.append(s); c.appendChild(e); return c; }
   // header: label, one big line per currency, then simple "label ..... value" lines
   function hero(lbl,big,lines,btn){
+    document.querySelector('.hero').hidden=!lbl;
+    if(!lbl){ $('h-btn').hidden=true; return; }
     $('h-lbl').textContent=lbl;
     const hb=$('h-big'); hb.textContent='';
     if(typeof big==='string') hb.appendChild(el('div','num',big));
@@ -297,7 +299,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const t=rows.filter(r=>r.date===today()&&r.type!=='old');
     let i=0,u=0,di=0,du=0; t.forEach(r=>{ if(isBuy(r)){ if(r.currency==='USD'){u+=r.amount; if(r.debt) du+=r.amount;} else {i+=r.amount; if(r.debt) di+=r.amount;} } });
     const d=totalDebt();
-    hero('کۆی کڕینی ئەمڕۆ', {i,u}, [['هەموو قەرزەکانم', both(d.i,d.u)]]);
+    hero(null);
     if(!t.length){ m.appendChild(empty('ئەمڕۆ هیچت نەکڕیوە','دوگمەی «کڕینی نوێ» دابگرە بۆ تۆمارکردنی یەکەم کڕین.')); return; }
     m.appendChild(el('div','sec-title','کڕینەکانی ئەمڕۆ'));
     const c=el('div','card'); t.sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(r=>c.appendChild(entryRow(r))); m.appendChild(c);
