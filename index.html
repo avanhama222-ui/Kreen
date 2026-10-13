@@ -51,6 +51,10 @@ button{font:inherit;color:inherit}
 .hero .big{font-size:2.3rem;font-weight:800;line-height:1.15;margin-top:2px}
 .hero .sub{margin-top:6px;opacity:.85;font-size:.95rem}
 .hero .sub b{font-weight:700}
+.hero .sub{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.hline{display:flex;justify-content:space-between;align-items:center;gap:12px;background:rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;font-size:.95rem}
+.hline b{white-space:nowrap}
+.big2{font-size:1.6rem;opacity:.9}
 
 /* content */
 main{padding:16px 16px calc(110px + env(safe-area-inset-bottom,0px));max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
@@ -267,8 +271,14 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     return row;
   }
   function empty(t,s){ const c=el('div','card'); const e=el('div','empty'); e.appendChild(el('b',null,t)); if(s) e.append(s); c.appendChild(e); return c; }
-  function hero(lbl,big,sub,btn){
-    $('h-lbl').textContent=lbl; $('h-big').textContent=big; $('h-sub').innerHTML=''; if(sub) $('h-sub').append(...sub);
+  // header: label, one big line per currency, then simple "label ..... value" lines
+  function hero(lbl,big,lines,btn){
+    $('h-lbl').textContent=lbl;
+    const hb=$('h-big'); hb.textContent='';
+    if(typeof big==='string') hb.appendChild(el('div','num',big));
+    else { const L=[]; if(big.i||!big.u) L.push(fmtIQD(big.i)); if(big.u) L.push(fmtUSD(big.u)); L.forEach((t,k)=>hb.appendChild(el('div','num'+(k?' big2':''),t))); }
+    const hs=$('h-sub'); hs.textContent='';
+    (lines||[]).forEach(([a,v])=>{ const r=el('div','hline'); r.append(el('span',null,a), el('b','num',v)); hs.appendChild(r); });
     const b=$('h-btn'); if(btn){ b.hidden=false; b.textContent=btn[0]; b.onclick=btn[1]; } else b.hidden=true;
   }
   const bold=t=>el('b','num',t);
@@ -287,9 +297,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const t=rows.filter(r=>r.date===today()&&r.type!=='old');
     let i=0,u=0,di=0,du=0; t.forEach(r=>{ if(isBuy(r)){ if(r.currency==='USD'){u+=r.amount; if(r.debt) du+=r.amount;} else {i+=r.amount; if(r.debt) di+=r.amount;} } });
     const d=totalDebt();
-    const sub=[]; if(u) sub.push('دۆلار: ',bold(fmtUSD(u)),'   ');
-    sub.push('هەموو قەرزەکانم: ',bold(both(d.i,d.u)));
-    hero('کۆی کڕینی ئەمڕۆ', fmtIQD(i), sub);
+    hero('کۆی کڕینی ئەمڕۆ', {i,u}, [['هەموو قەرزەکانم', both(d.i,d.u)]]);
     if(!t.length){ m.appendChild(empty('ئەمڕۆ هیچت نەکڕیوە','دوگمەی «کڕینی نوێ» دابگرە بۆ تۆمارکردنی یەکەم کڕین.')); return; }
     m.appendChild(el('div','sec-title','کڕینەکانی ئەمڕۆ'));
     const c=el('div','card'); t.sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(r=>c.appendChild(entryRow(r))); m.appendChild(c);
@@ -300,10 +308,9 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const ns=names();
     let i=0,u=0; rows.forEach(r=>{ if(isBuy(r)){ if(r.currency==='USD') u+=r.amount; else i+=r.amount; } });
     const d=totalDebt(); const owing=ns.filter(n=>{const s=summary(n); return s.owe.IQD||s.owe.USD;}).length;
-    const sub=[]; if(d.u) sub.push('دۆلار: ',bold(fmtUSD(d.u)),'   ');
-    sub.push('قەرزاری ',bold(String(owing)),' دوکانیت   کۆی کڕین: ',bold(both(i,u)));
-    if(rate>0 && d.u) sub.push('   هەمووی بە دینار: ',bold(fmtIQD(d.i+d.u*rate)));
-    hero('کۆی قەرزی هەموو دوکانەکان', fmtIQD(d.i), sub);
+    const lines=[['قەرزاری چەند دوکانیت', String(owing)]];
+    if(rate>0 && d.u) lines.push(['هەمووی بە دینار', fmtIQD(d.i+d.u*rate)]);
+    hero('کۆی قەرزی هەموو دوکانەکان', {i:d.i,u:d.u}, lines);
     if(!ns.length){ m.appendChild(empty('هێشتا هیچ دوکانێک نییە','کە یەکەم کڕینت تۆمار کرد، ناوی دوکانەکە لێرە دەردەکەوێت.')); return; }
     const c=el('div','card'); ns.forEach(n=>c.appendChild(nameRow(n))); m.appendChild(c);
   }
@@ -312,8 +319,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     $('title').textContent='قەرزەکان';
     const d=totalDebt();
     const owing=names().map(n=>[n,summary(n)]).filter(([,s])=>s.owe.IQD||s.owe.USD);
-    hero('کۆی قەرزەکانم', fmtIQD(d.i), [...(d.u?['دۆلار: ',bold(fmtUSD(d.u)),'   ']:[]), bold(String(owing.length)),' کەس']);
-    if(rate>0 && d.u) $('h-sub').append('   هەمووی بە دینار: ', bold(fmtIQD(d.i+d.u*rate)));
+    hero('کۆی قەرزەکانم', {i:d.i,u:d.u}, [['کەس', String(owing.length)]]);
     if(!owing.length){ m.appendChild(empty('هیچ قەرزێکت نییە 👌','کاتێک شتێک بە قەرز دەکڕیت، لێرە دەردەکەوێت.')); }
     else { const c=el('div','card'); owing.forEach(([n,s])=>c.appendChild(nameRow(n,both(s.owe.IQD,s.owe.USD),'red'))); m.appendChild(c); }
     const b=el('button','btn light block','+ زیادکردنی قەرزی کۆن'); b.onclick=()=>openForm(null,{old:true}); m.appendChild(b);
@@ -323,7 +329,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const s=summary(shop);
     $('title').textContent=shop;
     const owe=s.owe.IQD||s.owe.USD;
-    hero(owe?'قەرزی ماوە لای ئەم دوکانە':'هیچ قەرزێکت لای نییە', owe?both(s.owe.IQD,s.owe.USD):'✓', ['کۆی کڕین: ',bold(both(s.buy.IQD,s.buy.USD))], owe?['دانەوەی قەرز',()=>openPay(shop,s)]:null);
+    hero(owe?'قەرزی ماوە لای ئەم دوکانە':'هیچ قەرزێکت لای نییە', owe?{i:s.owe.IQD,u:s.owe.USD}:'✓', [['کۆی کڕین لەم دوکانە', both(s.buy.IQD,s.buy.USD)]], owe?['دانەوەی قەرز',()=>openPay(shop,s)]:null);
     m.appendChild(el('div','sec-title','مامەڵەکان'));
     const items=rows.filter(r=>r.shop===shop).sort((a,b)=>(a.ts||0)-(b.ts||0));
     const run={IQD:0,USD:0}; const out=[];
@@ -335,7 +341,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
 
   function renderMore(m){
     $('title').textContent='مێژوو و ڕێکخستن';
-    hero('هەموو کڕینەکان', fmtIQD(rows.filter(isBuy).filter(r=>r.currency!=='USD').reduce((a,r)=>a+r.amount,0)), [bold(String(rows.length)),' تۆمار']);
+    hero('هەموو کڕینەکان', {i:rows.filter(isBuy).filter(r=>r.currency!=='USD').reduce((a,r)=>a+r.amount,0), u:rows.filter(isBuy).filter(r=>r.currency==='USD').reduce((a,r)=>a+r.amount,0)}, [['ژمارەی تۆمار', String(rows.length)]]);
     historySearch(m);
     m.appendChild(el('div','sec-title','ڕێکخستن'));
     // rate
