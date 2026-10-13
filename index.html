@@ -43,6 +43,8 @@ button{font:inherit;color:inherit}
 .top{background:var(--brand);color:var(--on-brand);padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 26px;border-radius:0 0 28px 28px}
 .top-row{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px}
 .top h1{margin:0;font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:10px;min-width:0}
+.top.slim{padding-bottom:14px}
+.top h1 small{font-weight:500;opacity:.8;font-size:.85rem}
 .top h1 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .iconbtn{background:rgba(255,255,255,.14);border:0;color:var(--on-brand);width:40px;height:40px;border-radius:12px;display:grid;place-items:center;cursor:pointer;flex:none}
 .iconbtn svg{width:22px;height:22px}
@@ -273,7 +275,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   function empty(t,s){ const c=el('div','card'); const e=el('div','empty'); e.appendChild(el('b',null,t)); if(s) e.append(s); c.appendChild(e); return c; }
   // header: label, one big line per currency, then simple "label ..... value" lines
   function hero(lbl,big,lines,btn){
-    document.querySelector('.hero').hidden=!lbl;
+    document.querySelector('.hero').hidden=!lbl; document.querySelector('.top').classList.toggle('slim',!lbl);
     if(!lbl){ $('h-btn').hidden=true; return; }
     $('h-lbl').textContent=lbl;
     const hb=$('h-big'); hb.textContent='';
@@ -295,7 +297,8 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   }
 
   function renderHome(m){
-    $('title').textContent='ئەمڕۆ';
+    const W=['یەکشەممە','دووشەممە','سێشەممە','چوارشەممە','پێنجشەممە','هەینی','شەممە'], nd=new Date();
+    $('title').textContent=W[nd.getDay()]+' · '+nd.getDate()+'ی '+MONTHS[nd.getMonth()];
     const t=rows.filter(r=>r.date===today()&&r.type!=='old');
     let i=0,u=0,di=0,du=0; t.forEach(r=>{ if(isBuy(r)){ if(r.currency==='USD'){u+=r.amount; if(r.debt) du+=r.amount;} else {i+=r.amount; if(r.debt) di+=r.amount;} } });
     const d=totalDebt();
