@@ -343,7 +343,26 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
 
   function renderMore(m){
     $('title').textContent='مێژوو و ڕێکخستن';
-    hero('هەموو کڕینەکان', {i:rows.filter(isBuy).filter(r=>r.currency!=='USD').reduce((a,r)=>a+r.amount,0), u:rows.filter(isBuy).filter(r=>r.currency==='USD').reduce((a,r)=>a+r.amount,0)}, [['ژمارەی تۆمار', String(rows.length)]]);
+    // monthly totals of purchases (cash + debt), per currency
+    const mt={};
+    rows.filter(r=>isBuy(r)&&r.date).forEach(r=>{ const k=r.date.slice(0,7); const o=mt[k]||(mt[k]={ci:0,cu:0,di:0,du:0}); const U=r.currency==='USD';
+      if(r.debt){ U?o.du+=r.amount:o.di+=r.amount; } else { U?o.cu+=r.amount:o.ci+=r.amount; } });
+    const thisM=today().slice(0,7), cm=mt[thisM]||{ci:0,cu:0,di:0,du:0};
+    hero('کڕینی ئەم مانگە', {i:cm.ci+cm.di, u:cm.cu+cm.du}, [['بە نەقد', both(cm.ci,cm.cu)], ['بە قەرز', both(cm.di,cm.du)]]);
+    const mk=Object.keys(mt).sort().reverse();
+    if(mk.length){
+      m.appendChild(el('div','sec-title','کۆی کڕینی هەر مانگێک'));
+      const mc=el('div','card');
+      mk.forEach(k=>{ const o=mt[k]; const [y,mo]=k.split('-');
+        const r=el('div','row'); const mid=el('div','mid');
+        mid.appendChild(el('span','name',MONTHS[+mo-1]+' '+y));
+        [['نەقد: ',both(o.ci,o.cu)],['قەرز: ',both(o.di,o.du)]].forEach(([a,v])=>{ const s=el('span','meta',a); s.appendChild(el('bdi',null,v)); mid.appendChild(s); });
+        const end=el('div','end'); end.appendChild(el('span','amt num',both(o.ci+o.di,o.cu+o.du)));
+        r.append(mid,end);
+        r.onclick=()=>{ sq={mode:'day',month:k,day:'',name:''}; render(); setTimeout(()=>{ const t=$('hist'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); },50); };
+        mc.appendChild(r); });
+      m.appendChild(mc);
+    }
     historySearch(m);
     m.appendChild(el('div','sec-title','ڕێکخستن'));
     // rate
@@ -373,7 +392,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const c=el('div','card'); list.slice(0,300).forEach(r=>c.appendChild(entryRow(r,{showDay}))); res.appendChild(c);
   }
   function historySearch(m){
-    m.appendChild(el('div','sec-title','گەڕان لە مێژووی کڕین'));
+    const ht=el('div','sec-title','گەڕان لە مێژووی کڕین'); ht.id='hist'; m.appendChild(ht);
     const seg=el('div','seg'); const bD=el('button',null,'بە ڕۆژ'), bS=el('button',null,'بە دوکان'); bD.type=bS.type='button';
     seg.append(bD,bS); m.appendChild(seg);
     const card=el('div','card'); const box=el('div','setting'); card.appendChild(box); m.appendChild(card);
