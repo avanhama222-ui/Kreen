@@ -57,6 +57,12 @@ button{font:inherit;color:inherit}
 .hline{display:flex;justify-content:space-between;align-items:center;gap:12px;background:rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;font-size:.95rem}
 .hline b{white-space:nowrap}
 .big2{font-size:1.6rem;opacity:.9}
+.curtiles{direction:rtl;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.curtile{background:rgba(255,255,255,.12);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.curtile span{font-size:.82rem;opacity:.8}
+.curtile b{font-size:1.4rem;font-weight:800;line-height:1.2;direction:ltr;text-align:right}
+.hnote{font-size:.88rem;opacity:.85}
+.hnote bdi{font-weight:700}
 
 /* content */
 main{padding:16px 16px calc(110px + env(safe-area-inset-bottom,0px));max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
@@ -312,9 +318,10 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     $('h-lbl').textContent=lbl;
     const hb=$('h-big'); hb.textContent='';
     if(typeof big==='string') hb.appendChild(el('div','num',big));
-    else { const L=[]; if(big.i||!big.u) L.push(fmtIQD(big.i)); if(big.u) L.push(fmtUSD(big.u)); L.forEach((t,k)=>hb.appendChild(el('div','num'+(k?' big2':''),t))); }
+    else if(big.i && big.u){ const g=el('div','curtiles'); [['دینار',fmtIQD(big.i)],['دۆلار',fmtUSD(big.u)]].forEach(([a,v])=>{ const t=el('div','curtile'); t.append(el('span',null,a), el('b','num',v)); g.appendChild(t); }); hb.appendChild(g); }
+    else hb.appendChild(el('div','num', big.u ? fmtUSD(big.u) : fmtIQD(big.i)));
     const hs=$('h-sub'); hs.textContent='';
-    (lines||[]).forEach(([a,v])=>{ const r=el('div','hline'); r.append(el('span',null,a), el('b','num',v)); hs.appendChild(r); });
+    (lines||[]).forEach(([a,v,small])=>{ if(small){ const r=el('div','hnote',a); if(v) r.appendChild(el('bdi',null,v)); hs.appendChild(r); return; } const r=el('div','hline'); r.append(el('span',null,a), el('b','num',v)); hs.appendChild(r); });
     const b=$('h-btn'); if(btn){ b.hidden=false; b.textContent=btn[0]; b.onclick=btn[1]; } else b.hidden=true;
   }
   const bold=t=>el('b','num',t);
@@ -345,8 +352,9 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const ns=names();
     let i=0,u=0; rows.forEach(r=>{ if(isBuy(r)){ if(r.currency==='USD') u+=r.amount; else i+=r.amount; } });
     const d=totalDebt(); const owing=ns.filter(n=>{const s=summary(n); return s.owe.IQD||s.owe.USD;}).length;
-    const lines=[['قەرزاری چەند دوکانیت', String(owing)]];
-    if(rate>0 && d.u) lines.push(['هەمووی بە دینار', fmtIQD(d.i+d.u*rate)]);
+    const lines=[];
+    if(rate>0 && d.u && d.i) lines.push(['هەمووی بە دینار: ', fmtIQD(d.i+d.u*rate), 1]);
+    lines.push([owing ? 'قەرزاری '+owing+' دوکانیت' : 'هیچ قەرزێکت نییە 👌', '', 1]);
     hero('کۆی قەرزی هەموو دوکانەکان', {i:d.i,u:d.u}, lines);
     if(!ns.length){ m.appendChild(empty('هێشتا هیچ دوکانێک نییە','کە یەکەم کڕینت تۆمار کرد، ناوی دوکانەکە لێرە دەردەکەوێت.')); return; }
     const c=el('div','card'); ns.forEach(n=>{ const o=oldestDebt(n); c.appendChild(nameRow(n,null,null,o?debtAge(o):null)); }); m.appendChild(c);
