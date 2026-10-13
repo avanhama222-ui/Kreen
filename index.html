@@ -296,7 +296,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const end=el('div','end');
     end.appendChild(el('span','amt num'+(r.type==='pay'?' green':''),(r.type==='pay'?'− ':'')+fmt(r.amount,r.currency)));
     const k=kindOf(r); if(!opts.noName) end.appendChild(el('span','pill '+k[1],k[0]));
-    if(opts.bal && opts.bal!=='0') end.appendChild(el('span','meta num','ماوە: '+opts.bal));
+    if(opts.bal && opts.bal!=='0'){ const b=el('span','meta','ماوە: '); b.appendChild(el('bdi','num',opts.bal)); end.appendChild(b); }
     row.append(mid,end);
     row.onclick=()=>openForm(r); row.onkeydown=e=>{if(e.key==='Enter')openForm(r);};
     return row;
@@ -374,7 +374,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const s=summary(shop);
     $('title').textContent=shop;
     const owe=s.owe.IQD||s.owe.USD;
-    hero(owe?'قەرزی ماوە لای ئەم دوکانە':'هیچ قەرزێکت لای نییە', owe?{i:s.owe.IQD,u:s.owe.USD}:'✓', [['کۆی کڕین لەم دوکانە', both(s.buy.IQD,s.buy.USD)]], owe?['دانەوەی قەرز',()=>openPay(shop,s)]:null);
+    hero(owe?'قەرزی تۆ تەنها لای «'+shop+'»':'هیچ قەرزێکت لای «'+shop+'» نییە', owe?{i:s.owe.IQD,u:s.owe.USD}:'✓', [['هەموو کڕینت لەم دوکانە: ', both(s.buy.IQD,s.buy.USD), 1]], owe?['دانەوەی قەرز',()=>openPay(shop,s)]:null);
     m.appendChild(el('div','sec-title','مامەڵەکان'));
     const items=rows.filter(r=>r.shop===shop).sort((a,b)=>(a.ts||0)-(b.ts||0));
     const run={IQD:0,USD:0}; const out=[];
