@@ -188,6 +188,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
 <nav class="tabs" role="tablist">
   <button class="tab" role="tab" data-tab="home" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z"/></svg>ئەمڕۆ</button>
   <button class="tab" role="tab" data-tab="shops" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.5-5h13L20 9M4 9h16v11H4zM9 20v-6h6v6"/></svg>دوکانەکان</button>
+  <button class="tab" role="tab" data-tab="hist" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>مێژوو</button>
 </nav>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -324,7 +325,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected', t.dataset.tab===tab));
     $('back').hidden=!(shop || tab==='more'); $('gear').hidden = tab==='more' || !!shop; $('fab').hidden = tab==='more' && !shop;
     if(shop) return renderShop(m);
-    ({home:renderHome,shops:renderShops,debts:renderDebts,more:renderMore})[tab](m);
+    ({home:renderHome,shops:renderShops,debts:renderDebts,more:renderMore,hist:renderHist})[tab](m);
   }
 
   function renderHome(m){
@@ -389,29 +390,8 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   }
 
   function renderMore(m){
-    $('title').textContent='مێژوو و ڕێکخستن';
-    // monthly totals of purchases (cash + debt), per currency
-    const mt={};
-    rows.filter(r=>isBuy(r)&&r.date).forEach(r=>{ const k=r.date.slice(0,7); const o=mt[k]||(mt[k]={ci:0,cu:0,di:0,du:0}); const U=r.currency==='USD';
-      if(r.debt){ U?o.du+=r.amount:o.di+=r.amount; } else { U?o.cu+=r.amount:o.ci+=r.amount; } });
-    const thisM=today().slice(0,7), cm=mt[thisM]||{ci:0,cu:0,di:0,du:0};
-    hero('کڕینی ئەم مانگە', {i:cm.ci+cm.di, u:cm.cu+cm.du}, [['بە نەقد', both(cm.ci,cm.cu)], ['بە قەرز', both(cm.di,cm.du)]]);
-    const mk=Object.keys(mt).sort().reverse();
-    if(mk.length){
-      m.appendChild(el('div','sec-title','کۆی کڕینی هەر مانگێک'));
-      const mc=el('div','card');
-      mk.forEach(k=>{ const o=mt[k]; const [y,mo]=k.split('-');
-        const r=el('div','row'); const mid=el('div','mid');
-        mid.appendChild(el('span','name',MONTHS[+mo-1]+' '+y));
-        [['نەقد: ',both(o.ci,o.cu)],['قەرز: ',both(o.di,o.du)]].forEach(([a,v])=>{ const s=el('span','meta',a); s.appendChild(el('bdi',null,v)); mid.appendChild(s); });
-        const end=el('div','end'); end.appendChild(el('span','amt num',both(o.ci+o.di,o.cu+o.du)));
-        r.append(mid,end);
-        r.onclick=()=>{ sq={mode:'range',from:k+'-01',to:monthEnd(k),name:''}; render(); setTimeout(()=>{ const t=$('hist'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); },50); };
-        mc.appendChild(r); });
-      m.appendChild(mc);
-    }
-    historySearch(m);
-    m.appendChild(el('div','sec-title','ڕێکخستن'));
+    $('title').textContent='ڕێکخستن';
+    hero(null);
     // rate
     const rc=el('div','card'); const s2=el('div','setting');
     s2.append(el('b',null,'نرخی دۆلار'), el('p',null,'ئەگەر بینووسیت، قەرزی دۆلار و دینار پێکەوە بە دینار کۆ دەکرێنەوە.'));
@@ -459,16 +439,35 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
       const c=el('div','card'); items.forEach(r=>c.appendChild(entryRow(r))); res.appendChild(c);
     });
   }
+  function renderHist(m){ $('title').textContent='مێژووی کڕین'; hero(null); historySearch(m); }
+  function monthsList(res){
+    const mt={};
+    rows.filter(r=>isBuy(r)&&r.date).forEach(r=>{ const k=r.date.slice(0,7); const o=mt[k]||(mt[k]={ci:0,cu:0,di:0,du:0}); const U=r.currency==='USD';
+      if(r.debt){ U?o.du+=r.amount:o.di+=r.amount; } else { U?o.cu+=r.amount:o.ci+=r.amount; } });
+    const mk=Object.keys(mt).sort().reverse();
+    if(!mk.length){ res.appendChild(empty('هێشتا هیچ کڕینێک تۆمار نەکراوە')); return; }
+    res.appendChild(el('p','hint','دەست لە مانگێک بدە بۆ بینینی هەموو کڕینەکانی.'));
+    const mc=el('div','card');
+    mk.forEach(k=>{ const o=mt[k]; const [y,mo]=k.split('-');
+      const r=el('div','row'); const mid=el('div','mid');
+      mid.appendChild(el('span','name',MONTHS[+mo-1]+' '+y));
+      [['نەقد: ',both(o.ci,o.cu)],['قەرز: ',both(o.di,o.du)]].forEach(([a,v])=>{ const s=el('span','meta',a); s.appendChild(el('bdi',null,v)); mid.appendChild(s); });
+      const end=el('div','end'); end.appendChild(el('span','amt num',both(o.ci+o.di,o.cu+o.du)));
+      r.append(mid,end); r.appendChild(el('span','chev','‹'));
+      r.onclick=()=>{ sq={mode:'range',from:k+'-01',to:monthEnd(k),name:''}; render(); window.scrollTo(0,0); };
+      mc.appendChild(r); });
+    res.appendChild(mc);
+  }
   function historySearch(m){
-    const ht=el('div','sec-title','گەڕان لە مێژووی کڕین'); ht.id='hist'; m.appendChild(ht);
-    const seg=el('div','seg'); const bD=el('button',null,'📅 بە بەروار'), bS=el('button',null,'🏪 بە دوکان'); bD.type=bS.type='button';
-    seg.append(bD,bS); m.appendChild(seg);
+    const seg=el('div','seg'); const bD=el('button',null,'بە بەروار'), bS=el('button',null,'بە دوکان'), bM=el('button',null,'مانگەکان'); bD.type=bS.type=bM.type='button';
+    seg.append(bD,bS,bM); m.appendChild(seg);
     const card=el('div','card'); const box=el('div','setting'); card.appendChild(box); m.appendChild(card);
     const res=el('div'); res.style.cssText='display:flex;flex-direction:column;gap:12px'; m.appendChild(res);
 
     function draw(){
-      bD.setAttribute('aria-pressed', sq.mode==='range'); bS.setAttribute('aria-pressed', sq.mode==='shop');
-      box.textContent=''; res.textContent='';
+      bD.setAttribute('aria-pressed', sq.mode==='range'); bS.setAttribute('aria-pressed', sq.mode==='shop'); bM.setAttribute('aria-pressed', sq.mode==='months');
+      box.textContent=''; res.textContent=''; card.hidden = sq.mode==='months';
+      if(sq.mode==='months'){ monthsList(res); return; }
       if(sq.mode==='range'){
         const t=today(), mk=t.slice(0,7), pm=addDays(mk+'-01',-1).slice(0,7);
         const P=[['ئەمڕۆ',t,t],['دوێنێ',addDays(t,-1),addDays(t,-1)],['ئەم هەفتەیە',addDays(t,-6),t],['ئەم مانگە',mk+'-01',t],['مانگی پێشوو',pm+'-01',monthEnd(pm)]];
@@ -495,7 +494,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
         ni.oninput=show; show();
       }
     }
-    bD.onclick=()=>{ sq.mode='range'; draw(); }; bS.onclick=()=>{ sq.mode='shop'; draw(); };
+    bD.onclick=()=>{ sq.mode='range'; draw(); }; bS.onclick=()=>{ sq.mode='shop'; draw(); }; bM.onclick=()=>{ sq.mode='months'; draw(); };
     draw();
   }
 
