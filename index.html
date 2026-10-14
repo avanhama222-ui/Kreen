@@ -14,7 +14,7 @@
 <title>حسابی کڕینی دوکان</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" id="font-link" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap">
 <style>
 /* Layout: app shell. Colored header with the screen's key number, one screen per tab, bottom tab bar, add-sheet slides up from the bottom. */
 :root{
@@ -40,6 +40,11 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:1rem;l
 .swatches{display:flex;gap:12px;flex-wrap:wrap}
 .sw{width:44px;height:44px;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 2px var(--line);cursor:pointer;padding:0}
 .sw.sel{box-shadow:0 0 0 3px var(--ink)}
+.fonts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fbtn{border:2px solid transparent;background:var(--bg);border-radius:14px;padding:10px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.fbtn b{font-size:1.15rem;font-weight:700;line-height:1.4}
+.fbtn small{font-size:.72rem;color:var(--muted);font-family:system-ui,sans-serif}
+.fbtn.sel{border-color:var(--brand-2);background:var(--brand-soft)}
 .setting .sub-lbl{font-size:.88rem;color:var(--muted);margin-top:4px}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit}
@@ -253,7 +258,9 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
 
   let rows=[], rate=0;
   const COLORS={green:['سەوز','#0b5d4b','#0e7c64'], blue:['شین','#1d4e89','#2b6cc4'], purple:['مۆر','#4a2d7d','#6c46b5'], brown:['قاوەیی','#6a3d1c','#a0602c'], rose:['پەمەیی','#8a2c4f','#c0466f'], gray:['ڕەش','#23292c','#4d585d']};
-  let look={color:'green', theme:'auto', text:'normal'};
+  const FONTS={vazir:['Vazirmatn','400;500;700;800'], kufi:['Noto Kufi Arabic','400;500;700;800'], plex:['IBM Plex Sans Arabic','400;500;700'], naskh:['Noto Naskh Arabic','400;500;700'], zain:['Zain','400;700;800'], marhey:['Marhey','400;500;700']};
+  const gf=(name,w)=>'https://fonts.googleapis.com/css2?family='+name.replace(/ /g,'+')+(w?':wght@'+w:'')+'&display=swap';
+  let look={color:'green', theme:'auto', text:'normal', font:'vazir'};
   try{ Object.assign(look, JSON.parse(localStorage.getItem('kreen-look')||'{}')); }catch(e){}
   function applyLook(){
     const d=document.documentElement, c=COLORS[look.color]||COLORS.green;
@@ -261,6 +268,8 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     d.style.setProperty('--brand-soft','color-mix(in srgb, '+c[2]+' 15%, var(--card))');
     if(look.theme==='auto') d.removeAttribute('data-theme'); else d.setAttribute('data-theme',look.theme);
     d.classList.toggle('big-text', look.text==='big');
+    const f=FONTS[look.font]||FONTS.vazir; const fl=document.getElementById('font-link'); const href=gf(f[0],f[1]); if(fl && fl.href!==href) fl.href=href;
+    d.style.setProperty('--f','"'+f[0]+'",Tahoma,"Segoe UI",sans-serif');
     const m=document.querySelector('meta[name=theme-color]'); if(m) m.content=c[1];
   }
   function saveLook(){ try{ localStorage.setItem('kreen-look',JSON.stringify(look)); }catch(e){} applyLook(); render(); }
@@ -427,6 +436,11 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     Object.entries(COLORS).forEach(([k,[n,c1,c2]])=>{ const b=el('button','sw'+(look.color===k?' sel':'')); b.type='button'; b.title=n; b.setAttribute('aria-label',n); b.style.background='linear-gradient(135deg,'+c1+','+c2+')'; b.onclick=()=>{ look.color=k; saveLook(); }; sws.appendChild(b); });
     ls.appendChild(sws);
     const mkSeg=(lbl,key,opts)=>{ ls.appendChild(el('span','sub-lbl',lbl)); const g=el('div','seg'); opts.forEach(([v,t])=>{ const b=el('button',null,t); b.type='button'; b.setAttribute('aria-pressed',look[key]===v); b.onclick=()=>{ look[key]=v; saveLook(); }; g.appendChild(b); }); ls.appendChild(g); };
+    ls.appendChild(el('span','sub-lbl','فۆنت'));
+    if(!document.getElementById('font-prev')){ const l=document.createElement('link'); l.rel='stylesheet'; l.id='font-prev'; l.href='https://fonts.googleapis.com/css2?'+Object.values(FONTS).map(f=>'family='+f[0].replace(/ /g,'+')+':wght@700').join('&')+'&display=swap'; document.head.appendChild(l); }
+    const fg=el('div','fonts');
+    Object.entries(FONTS).forEach(([k,[n]])=>{ const b=el('button','fbtn'+(look.font===k?' sel':'')); b.type='button'; const t=el('b',null,'کڕینی نوێ'); t.style.fontFamily='"'+n+'"'; b.append(t, el('small',null,n)); b.onclick=()=>{ look.font=k; saveLook(); }; fg.appendChild(b); });
+    ls.appendChild(fg);
     mkSeg('ڕووکار','theme',[['auto','خۆکار'],['light','ڕووناک'],['dark','تاریک']]);
     mkSeg('قەبارەی نووسین','text',[['normal','ئاسایی'],['big','گەورە']]);
     lc.appendChild(ls); m.appendChild(lc);
