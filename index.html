@@ -34,7 +34,13 @@
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.5}
+html{font-size:16px}
+html.big-text{font-size:18px}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:1rem;line-height:1.5}
+.swatches{display:flex;gap:12px;flex-wrap:wrap}
+.sw{width:44px;height:44px;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 2px var(--line);cursor:pointer;padding:0}
+.sw.sel{box-shadow:0 0 0 3px var(--ink)}
+.setting .sub-lbl{font-size:.88rem;color:var(--muted);margin-top:4px}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit}
 .num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
@@ -246,6 +252,19 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   const prettyDay=d=>{ if(!d) return 'بەرواری نەزانراو'; if(d===today()) return 'ئەمڕۆ'; const y=new Date(); y.setDate(y.getDate()-1); if(d===dayOf(y)) return 'دوێنێ'; const p=d.split('-'); return (+p[2])+'ی '+MONTHS[+p[1]-1]+' '+p[0]; };
 
   let rows=[], rate=0;
+  const COLORS={green:['سەوز','#0b5d4b','#0e7c64'], blue:['شین','#1d4e89','#2b6cc4'], purple:['مۆر','#4a2d7d','#6c46b5'], brown:['قاوەیی','#6a3d1c','#a0602c'], rose:['پەمەیی','#8a2c4f','#c0466f'], gray:['ڕەش','#23292c','#4d585d']};
+  let look={color:'green', theme:'auto', text:'normal'};
+  try{ Object.assign(look, JSON.parse(localStorage.getItem('kreen-look')||'{}')); }catch(e){}
+  function applyLook(){
+    const d=document.documentElement, c=COLORS[look.color]||COLORS.green;
+    d.style.setProperty('--brand',c[1]); d.style.setProperty('--brand-2',c[2]);
+    d.style.setProperty('--brand-soft','color-mix(in srgb, '+c[2]+' 15%, var(--card))');
+    if(look.theme==='auto') d.removeAttribute('data-theme'); else d.setAttribute('data-theme',look.theme);
+    d.classList.toggle('big-text', look.text==='big');
+    const m=document.querySelector('meta[name=theme-color]'); if(m) m.content=c[1];
+  }
+  function saveLook(){ try{ localStorage.setItem('kreen-look',JSON.stringify(look)); }catch(e){} applyLook(); render(); }
+  applyLook();
   let tab='home', shop=null;     // shop: open shop page
   let form={cur:'IQD',debt:false,old:false,editing:null};
 
@@ -401,6 +420,16 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     $('title').textContent='ڕێکخستن';
     hero(null);
     // rate
+    // appearance
+    const lc=el('div','card'); const ls=el('div','setting'); ls.appendChild(el('b',null,'جوانکاری'));
+    ls.appendChild(el('span','sub-lbl','ڕەنگی ئەپ'));
+    const sws=el('div','swatches');
+    Object.entries(COLORS).forEach(([k,[n,c1,c2]])=>{ const b=el('button','sw'+(look.color===k?' sel':'')); b.type='button'; b.title=n; b.setAttribute('aria-label',n); b.style.background='linear-gradient(135deg,'+c1+','+c2+')'; b.onclick=()=>{ look.color=k; saveLook(); }; sws.appendChild(b); });
+    ls.appendChild(sws);
+    const mkSeg=(lbl,key,opts)=>{ ls.appendChild(el('span','sub-lbl',lbl)); const g=el('div','seg'); opts.forEach(([v,t])=>{ const b=el('button',null,t); b.type='button'; b.setAttribute('aria-pressed',look[key]===v); b.onclick=()=>{ look[key]=v; saveLook(); }; g.appendChild(b); }); ls.appendChild(g); };
+    mkSeg('ڕووکار','theme',[['auto','خۆکار'],['light','ڕووناک'],['dark','تاریک']]);
+    mkSeg('قەبارەی نووسین','text',[['normal','ئاسایی'],['big','گەورە']]);
+    lc.appendChild(ls); m.appendChild(lc);
     const rc=el('div','card'); const s2=el('div','setting');
     s2.append(el('b',null,'نرخی دۆلار'), el('p',null,'ئەگەر بینووسیت، قەرزی دۆلار و دینار پێکەوە بە دینار کۆ دەکرێنەوە.'));
     const ri=el('input','num'); ri.type='number'; ri.inputMode='numeric'; ri.placeholder='بۆ نموونە 1450'; ri.value=rate||''; ri.id='rate';
