@@ -172,6 +172,9 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
 .sumcard .big.big2{font-size:1.35rem}
 .sumboxes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .sumboxes .sumbox.ret{grid-column:1/-1}
+.extras{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:2px;padding-bottom:70px}
+.xbtn{border:0;background:none;color:var(--muted);font-size:.82rem;padding:8px 10px;border-radius:10px;cursor:pointer}
+.xbtn:active{background:var(--line)}
 .two.stack{grid-template-columns:1fr}
 .sumbox{border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .sumbox span{font-size:.78rem;color:var(--muted)}
@@ -419,9 +422,10 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     for(const r of items){ if(r.type==='pay'||(r.type==='ret'&&r.debt)) run[r.currency]-=r.amount; else if(r.type==='ret'){} else if(r.type==='old'||r.debt) run[r.currency]+=r.amount;
       out.push(entryRow(r,{noName:true,showDay:true,bal:both(Math.max(run.IQD,0),Math.max(run.USD,0))})); }
     const c=el('div','card'); out.reverse().forEach(x=>c.appendChild(x)); m.appendChild(c);
-    const rb=el('button','btn light block','↩ گەڕاندنەوەی شت بۆ ئەم دوکانە'); rb.onclick=()=>openForm(null,{ret:true}); m.appendChild(rb);
-    const sb=el('button','btn light block','📤 ناردنی حساب بۆ دوکاندار'); sb.onclick=()=>shareStatement(shop); m.appendChild(sb);
-    const ob=el('button','btn ghost block','+ قەرزی کۆنی ئەم دوکانە'); ob.onclick=()=>openForm(null,{old:true}); m.appendChild(ob);
+    // small, quiet extras (rarely used)
+    const ex=el('div','extras');
+    [['↩ گەڕاوە',()=>openForm(null,{ret:true})],['📤 ناردنی حساب',()=>shareStatement(shop)],['+ قەرزی کۆن',()=>openForm(null,{old:true})]].forEach(([t,f])=>{ const b=el('button','xbtn',t); b.type='button'; b.onclick=f; ex.appendChild(b); });
+    m.appendChild(ex);
   }
   function shareStatement(name){
     const s=summary(name);
