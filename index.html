@@ -20,17 +20,17 @@
 :root{
   --bg:#eef2f0; --card:#ffffff; --ink:#15211d; --muted:#6b7a74; --line:#e3e9e6;
   --brand:#0b5d4b; --brand-2:#0e7c64; --brand-soft:#e1f1ec; --on-brand:#ffffff;
-  --red:#c8412d; --red-soft:#fbe9e5; --green:#11845f; --cash-bg:#f1faf5; --debt-bg:#fdf1ef;
+  --red:#c8412d; --red-soft:#fbe9e5; --green:#11845f; --cash-bg:#f1faf5; --debt-bg:#fdf1ef; --ret:#2f63b5; --ret-bg:#eef3fc;
   --f:"Vazirmatn",Tahoma,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0d1412; --card:#17201d; --ink:#e7eeeb; --muted:#93a39c; --line:#26322e;
   --brand:#0b5d4b; --brand-2:#13a17f; --brand-soft:#173a31; --on-brand:#ffffff;
-  --red:#f07c66; --red-soft:#3a201a; --green:#4fd1a1; --cash-bg:#15281f; --debt-bg:#2c1a16; color-scheme:dark}}
+  --red:#f07c66; --red-soft:#3a201a; --green:#4fd1a1; --cash-bg:#15281f; --debt-bg:#2c1a16; --ret:#8db4f5; --ret-bg:#18223a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0d1412; --card:#17201d; --ink:#e7eeeb; --muted:#93a39c; --line:#26322e;
   --brand:#0b5d4b; --brand-2:#13a17f; --brand-soft:#173a31; --on-brand:#ffffff;
-  --red:#f07c66; --red-soft:#3a201a; --green:#4fd1a1; --cash-bg:#15281f; --debt-bg:#2c1a16; color-scheme:dark}
+  --red:#f07c66; --red-soft:#3a201a; --green:#4fd1a1; --cash-bg:#15281f; --debt-bg:#2c1a16; --ret:#8db4f5; --ret-bg:#18223a; color-scheme:dark}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
@@ -84,6 +84,10 @@ main{padding:16px 16px calc(110px + env(safe-area-inset-bottom,0px));max-width:6
 .row.t-cash{background:var(--cash-bg)}
 .row.t-debt{background:var(--debt-bg)}
 .row.t-paid{background:var(--cash-bg)}
+.row.t-ret{background:var(--ret-bg)}
+.pill.ret{background:var(--ret-bg);color:var(--ret)}
+.avatar.k-ret{background:var(--ret-bg);color:var(--ret)}
+.amt.ret{color:var(--ret)}
 
 .row:active{background:var(--bg)}
 .avatar{width:40px;height:40px;border-radius:50%;background:var(--brand-soft);color:var(--brand-2);display:grid;place-items:center;font-weight:800;flex:none;font-size:1.05rem}
@@ -167,10 +171,13 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
 .sumcard .big{font-size:2rem;font-weight:800;line-height:1.1}
 .sumcard .big.big2{font-size:1.35rem}
 .sumboxes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sumboxes .sumbox.ret{grid-column:1/-1}
+.two.stack{grid-template-columns:1fr}
 .sumbox{border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .sumbox span{font-size:.78rem;color:var(--muted)}
 .sumbox b{font-weight:800;font-size:.95rem;overflow-wrap:anywhere}
 .sumbox.cash{background:var(--cash-bg)} .sumbox.cash b{color:var(--green)}
+.sumbox.ret{background:var(--ret-bg)} .sumbox.ret b{color:var(--ret)}
 .sumbox.debt{background:var(--debt-bg)} .sumbox.debt b{color:var(--red)}
 .dayhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:6px 6px -4px;font-size:.92rem}
 .dayhead span{color:var(--muted);font-weight:700}
@@ -281,13 +288,15 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),1900);}
   function persist(){try{localStorage.setItem(K,JSON.stringify(rows));}catch(e){toast('پاشەکەوت نەکرا');}}
   function normalize(r){ if(!r||!r.shop) return null; if(r.amount==null) r.amount=(Number(r.qty)||1)*(Number(r.price)||0); r.type=r.type||'buy'; r.currency=r.currency||'IQD'; return r; }
-  const isBuy=r=>r.type!=='pay'&&r.type!=='old';
+  const isBuy=r=>r.type==='buy';
+  const isRet=r=>r.type==='ret';
 
   function summary(name){
     const s={buy:{IQD:0,USD:0},paid:{IQD:0,USD:0},owe:{IQD:0,USD:0},n:0,last:0};
     for(const r of rows){ if(r.shop!==name) continue; s.n++; s.last=Math.max(s.last,r.ts||0);
       if(r.type==='pay'){ s.paid[r.currency]+=r.amount; s.owe[r.currency]-=r.amount; }
       else if(r.type==='old'){ s.owe[r.currency]+=r.amount; }
+      else if(r.type==='ret'){ s.buy[r.currency]-=r.amount; if(r.debt) s.owe[r.currency]-=r.amount; }
       else { s.buy[r.currency]+=r.amount; if(r.debt) s.owe[r.currency]+=r.amount; else s.paid[r.currency]+=r.amount; } }
     s.owe.IQD=s.owe.IQD>0.5?s.owe.IQD:0; s.owe.USD=s.owe.USD>0.005?s.owe.USD:0;
     return s;
@@ -297,7 +306,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     ['IQD','USD'].forEach(cur=>{
       const its=rows.filter(r=>r.shop===name&&r.currency===cur);
       const debts=its.filter(r=>r.type==='old'||(isBuy(r)&&r.debt)).map(r=>({d:r.date,ts:r.ts||0,left:r.amount})).sort((a,b)=>(a.d||'0')<(b.d||'0')?-1:(a.d||'0')>(b.d||'0')?1:a.ts-b.ts);
-      let paid=its.filter(r=>r.type==='pay').reduce((a,r)=>a+r.amount,0);
+      let paid=its.filter(r=>r.type==='pay'||(r.type==='ret'&&r.debt)).reduce((a,r)=>a+r.amount,0);
       for(const x of debts){ const t=Math.min(paid,x.left); x.left-=t; paid-=t; if(x.left>(cur==='USD'?0.005:0.5)){ if(best===null||(x.d||'0')<best) best=x.d||'0'; break; } }
     });
     return best; // null = no debt, '0' = undated old debt, else YYYY-MM-DD
@@ -311,18 +320,19 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   function kindOf(r){
     if(r.type==='pay') return ['قەرز دراوەتەوە','paid'];
     if(r.type==='old') return ['قەرزی کۆن','debt'];
+    if(r.type==='ret') return [r.debt?'گەڕاوە (لە قەرز)':'گەڕاوە (پارە)','ret'];
     return r.debt ? ['بە قەرز','debt'] : ['نەقد','cash'];
   }
   function entryRow(r, opts={}){
     const row=el('div','row t-'+kindOf(r)[1]); row.tabIndex=0; row.setAttribute('role','button');
-    if(opts.noName){ const k=kindOf(r)[1]; row.appendChild(el('div','avatar k-'+k, k==='paid'?'↓':k==='debt'?'!':'✓')); }
+    if(opts.noName){ const k=kindOf(r)[1]; row.appendChild(el('div','avatar k-'+k, k==='paid'?'↓':k==='ret'?'↩':k==='debt'?'!':'✓')); }
     else row.appendChild(el('div','avatar',(r.shop||'?').trim().charAt(0)));
     const mid=el('div','mid');
     mid.appendChild(el('span','name',opts.noName ? kindOf(r)[0] : r.shop));
     const when = r.type==='old' ? prettyDay(r.date) : (opts.showDay ? prettyDay(r.date)+' · ' : '')+timeOf(r.ts||0);
     mid.appendChild(el('span','meta',when));
     const end=el('div','end');
-    end.appendChild(el('span','amt num'+(r.type==='pay'?' green':''),(r.type==='pay'?'− ':'')+fmt(r.amount,r.currency)));
+    end.appendChild(el('span','amt num'+(r.type==='pay'?' green':r.type==='ret'?' ret':''),(r.type==='pay'||r.type==='ret'?'− ':'')+fmt(r.amount,r.currency)));
     const k=kindOf(r); if(!opts.noName) end.appendChild(el('span','pill '+k[1],k[0]));
     if(opts.bal && opts.bal!=='0'){ const b=el('span','meta','ماوە: '); b.appendChild(el('bdi','num',opts.bal)); end.appendChild(b); }
     row.append(mid,end);
@@ -406,9 +416,10 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     m.appendChild(el('div','sec-title','مامەڵەکان'));
     const items=rows.filter(r=>r.shop===shop).sort((a,b)=>(a.ts||0)-(b.ts||0));
     const run={IQD:0,USD:0}; const out=[];
-    for(const r of items){ if(r.type==='pay') run[r.currency]-=r.amount; else if(r.type==='old'||r.debt) run[r.currency]+=r.amount;
+    for(const r of items){ if(r.type==='pay'||(r.type==='ret'&&r.debt)) run[r.currency]-=r.amount; else if(r.type==='ret'){} else if(r.type==='old'||r.debt) run[r.currency]+=r.amount;
       out.push(entryRow(r,{noName:true,showDay:true,bal:both(Math.max(run.IQD,0),Math.max(run.USD,0))})); }
     const c=el('div','card'); out.reverse().forEach(x=>c.appendChild(x)); m.appendChild(c);
+    const rb=el('button','btn light block','↩ گەڕاندنەوەی شت بۆ ئەم دوکانە'); rb.onclick=()=>openForm(null,{ret:true}); m.appendChild(rb);
     const sb=el('button','btn light block','📤 ناردنی حساب بۆ دوکاندار'); sb.onclick=()=>shareStatement(shop); m.appendChild(sb);
     const ob=el('button','btn ghost block','+ قەرزی کۆنی ئەم دوکانە'); ob.onclick=()=>openForm(null,{old:true}); m.appendChild(ob);
   }
@@ -417,7 +428,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     const items=rows.filter(r=>r.shop===name).sort((a,b)=>(a.date||'0')<(b.date||'0')?-1:(a.date||'0')>(b.date||'0')?1:(a.ts||0)-(b.ts||0));
     const dm=d=>{ if(!d) return 'پێشتر'; const p=d.split('-'); return (+p[2])+'/'+(+p[1])+'/'+p[0]; };
     const L=['حسابی '+name,'━━━━━━━━━━'];
-    items.slice(-60).forEach(r=>L.push(dm(r.date)+'  ·  '+kindOf(r)[0]+'  ·  '+(r.type==='pay'?'− ':'')+fmt(r.amount,r.currency)));
+    items.slice(-60).forEach(r=>L.push(dm(r.date)+'  ·  '+kindOf(r)[0]+'  ·  '+(r.type==='pay'||r.type==='ret'?'− ':'')+fmt(r.amount,r.currency)));
     if(items.length>60) L.splice(2,0,'(تەنها دوایین 60 مامەڵە)');
     L.push('━━━━━━━━━━','کۆی کڕین: '+both(s.buy.IQD,s.buy.USD),'قەرزی ماوە: '+both(s.owe.IQD,s.owe.USD));
     const text=L.join('\n');
@@ -464,9 +475,10 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   function resultList(res, list, title){
     res.textContent='';
     if(!list.length){ res.appendChild(empty('هیچ شتێک نەدۆزرایەوە','لەم ماوەیەدا هیچ کڕینێک تۆمار نەکراوە.')); return; }
-    let ci=0,cu=0,di=0,du=0,pi=0,pu=0,n=0;
+    let ci=0,cu=0,di=0,du=0,pi=0,pu=0,n=0,ri=0,ru=0;
     list.forEach(r=>{ const U=r.currency==='USD';
       if(r.type==='pay'){ U?pu+=r.amount:pi+=r.amount; }
+      else if(r.type==='ret'){ U?ru+=r.amount:ri+=r.amount; }
       else if(r.type==='old'){ U?du+=r.amount:di+=r.amount; }
       else { n++; if(r.debt){ U?du+=r.amount:di+=r.amount; } else { U?cu+=r.amount:ci+=r.amount; } } });
     const sc=el('div','sumcard');
@@ -475,16 +487,17 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     if(ti||!tu) sc.appendChild(el('div','big num',fmtIQD(ti)));
     if(tu) sc.appendChild(el('div','big num'+(ti?' big2':''),fmtUSD(tu)));
     const bx=el('div','sumboxes');
-    [['بە نەقد',both(ci,cu),'cash'],['بە قەرز',both(di,du),'debt']].forEach(([l,v,c])=>{ const d=el('div','sumbox '+c); d.append(el('span',null,l), el('b','num',v)); bx.appendChild(d); });
+    const BX=[['بە نەقد',both(ci,cu),'cash'],['بە قەرز',both(di,du),'debt']]; if(ri||ru) BX.push(['گەڕاوە',both(ri,ru),'ret']);
+    BX.forEach(([l,v,c])=>{ const d=el('div','sumbox '+c); d.append(el('span',null,l), el('b','num',v)); bx.appendChild(d); });
     sc.appendChild(bx);
-    const ft=el('span','lbl',n+' کڕین'); if(pi||pu){ ft.append('  ·  قەرز دراوەتەوە: '); ft.appendChild(el('bdi',null,both(pi,pu))); }
+    const ft=el('span','lbl',n+' کڕین'); if(pi||pu){ ft.append('  ·  قەرز دراوەتەوە: '); ft.appendChild(el('bdi',null,both(pi,pu))); } 
     sc.appendChild(ft);
     res.appendChild(sc);
     // grouped by day, newest first
     const groups=new Map();
     list.slice().sort((a,b)=>(b.date||'0').localeCompare(a.date||'0')||(b.ts||0)-(a.ts||0)).slice(0,400).forEach(r=>{ const k=r.date||''; if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(r); });
     groups.forEach((items,k)=>{
-      let gi=0,gu=0; items.forEach(r=>{ if(isBuy(r)) r.currency==='USD'?gu+=r.amount:gi+=r.amount; });
+      let gi=0,gu=0; items.forEach(r=>{ const sg=isBuy(r)?1:0; if(sg) r.currency==='USD'?gu+=sg*r.amount:gi+=sg*r.amount; });
       const h=el('div','dayhead'); h.append(el('b',null,prettyDay(k))); if(gi||gu) h.appendChild(el('span','num',both(gi,gu)));
       res.appendChild(h);
       const c=el('div','card'); items.forEach(r=>c.appendChild(entryRow(r))); res.appendChild(c);
@@ -493,8 +506,8 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   function renderHist(m){ $('title').textContent='مێژووی کڕین'; hero(null); historySearch(m); }
   function monthsList(res){
     const mt={};
-    rows.filter(r=>isBuy(r)&&r.date).forEach(r=>{ const k=r.date.slice(0,7); const o=mt[k]||(mt[k]={ci:0,cu:0,di:0,du:0}); const U=r.currency==='USD';
-      if(r.debt){ U?o.du+=r.amount:o.di+=r.amount; } else { U?o.cu+=r.amount:o.ci+=r.amount; } });
+    rows.filter(r=>(isBuy(r)||isRet(r))&&r.date).forEach(r=>{ const k=r.date.slice(0,7); const o=mt[k]||(mt[k]={ci:0,cu:0,di:0,du:0,ri:0,ru:0}); const U=r.currency==='USD', a=r.amount;
+      if(isRet(r)){ U?o.ru+=a:o.ri+=a; } else if(r.debt){ U?o.du+=a:o.di+=a; } else { U?o.cu+=a:o.ci+=a; } });
     const mk=Object.keys(mt).sort().reverse();
     if(!mk.length){ res.appendChild(empty('هێشتا هیچ کڕینێک تۆمار نەکراوە')); return; }
     res.appendChild(el('p','hint','دەست لە مانگێک بدە بۆ بینینی هەموو کڕینەکانی.'));
@@ -502,7 +515,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
     mk.forEach(k=>{ const o=mt[k]; const [y,mo]=k.split('-');
       const r=el('div','row'); const mid=el('div','mid');
       mid.appendChild(el('span','name',MONTHS[+mo-1]+' '+y));
-      [['نەقد: ',both(o.ci,o.cu)],['قەرز: ',both(o.di,o.du)]].forEach(([a,v])=>{ const s=el('span','meta',a); s.appendChild(el('bdi',null,v)); mid.appendChild(s); });
+      [['نەقد: ',both(o.ci,o.cu)],['قەرز: ',both(o.di,o.du)]].concat(o.ri||o.ru?[['گەڕاوە: ',both(o.ri,o.ru)]]:[]).forEach(([a,v])=>{ const s=el('span','meta',a); s.appendChild(el('bdi',null,v)); mid.appendChild(s); });
       const end=el('div','end'); end.appendChild(el('span','amt num',both(o.ci+o.di,o.cu+o.du)));
       r.append(mid,end); r.appendChild(el('span','chev','‹'));
       r.onclick=()=>{ sq={mode:'range',from:k+'-01',to:monthEnd(k),name:''}; render(); window.scrollTo(0,0); };
@@ -566,16 +579,18 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
 
   let delArmed=false, payCtx=null;
   function openForm(r, o={}){
-    form={cur:r?r.currency:'IQD', debt:r?!!r.debt:false, old:r?r.type==='old':!!o.old, editing:r?r.id:null};
+    form={cur:r?r.currency:'IQD', debt:r?!!r.debt:false, old:r?r.type==='old':!!o.old, ret:r?r.type==='ret':!!o.ret, editing:r?r.id:null};
+    if(form.ret && !r){ const ss=summary(shop||''); form.debt=!!(ss.owe.IQD||ss.owe.USD); }
+    const pb=document.querySelectorAll('#pay-seg button'); pb[0].textContent=form.ret?'پارەم وەرگرتەوە':'نەقد'; pb[1].textContent=form.ret?'لە قەرز کەم بێتەوە':'قەرز'; $('pay-seg').parentElement.classList.toggle('stack',form.ret);
     payCtx=o.pay||null; delArmed=false;
     const isPay = (r&&r.type==='pay') || !!payCtx;
-    $('s-title').textContent = payCtx?'دانەوەی قەرز': r ? (r.type==='pay'?'دەستکاری پارەدان':form.old?'دەستکاری قەرزی کۆن':'دەستکاری کڕین') : form.old?'قەرزی کۆن':'کڕینی نوێ';
-    $('amt-lbl').textContent = isPay?'بڕی پارە':form.old?'بڕی قەرز':'نرخی کڕین';
+    $('s-title').textContent = payCtx?'دانەوەی قەرز': r ? (r.type==='pay'?'دەستکاری پارەدان':form.old?'دەستکاری قەرزی کۆن':form.ret?'دەستکاری گەڕاوە':'دەستکاری کڕین') : form.old?'قەرزی کۆن':form.ret?'گەڕاندنەوەی شت':'کڕینی نوێ';
+    $('amt-lbl').textContent = isPay?'بڕی پارە':form.old?'بڕی قەرز':form.ret?'نرخی ئەو شتەی گەڕاندتەوە':'نرخی کڕین';
     $('f-shop').value = r?r.shop : payCtx?payCtx.shop : shop||'';
     $('f-amt').value = r?r.amount : payCtx?payCtx.amount : '';
     $('pay-seg').hidden = isPay||form.old; $('old-date').hidden=!form.old; $('f-date').value = r&&form.old ? (r.date||'') : '';
     $('f-del').hidden=!r; $('f-del').textContent='سڕینەوە';
-    $('f-hint').textContent = r ? (r.type==='old'?'':'تۆمار کراوە: '+prettyDay(r.date)+' '+timeOf(r.ts||0)) : payCtx ? 'قەرزی ماوە: '+payCtx.oweText : form.old ? 'قەرزی کۆن ناچێتە سەر کڕینی ئەمڕۆ.' : 'بەروار و کات خۆی دادەنرێت.';
+    $('f-hint').textContent = r ? (r.type==='old'?'':'تۆمار کراوە: '+prettyDay(r.date)+' '+timeOf(r.ts||0)) : payCtx ? 'قەرزی ماوە: '+payCtx.oweText : form.old ? 'قەرزی کۆن ناچێتە سەر کڕینی ئەمڕۆ.' : form.ret ? 'ئەگەر بە قەرز کڕیبووت «لە قەرز کەم بێتەوە» هەڵبژێرە، ئەگەر پارەکەت وەرگرتەوە «پارەم وەرگرت».' : 'بەروار و کات خۆی دادەنرێت.';
     if(payCtx) form.cur=payCtx.cur;
     setSeg('cur-seg','c',form.cur); setSeg('pay-seg','d',form.debt?1:0);
     $('f-shop').readOnly=!!payCtx;
@@ -642,6 +657,12 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
       const d=$('f-date').value||'';
       rows.push({id:'o'+id(),type:'old',shop:name,amount,currency:form.cur,debt:true,date:d,ts:d?Date.parse(d+'T12:00:00'):0});
       persist(); hideSheet(); render(); toast('قەرزی کۆن زیاد کرا'); return;
+    }
+    if(form.ret){
+      if(!rows.some(r=>r.shop===name)){ toast('ئەم دوکانە نییە'); return; }
+      if(form.debt){ const ow=summary(name).owe[form.cur]; if(amount>ow+1e-9){ toast(ow>0?'قەرزەکە تەنها '+fmt(ow,form.cur)+'یە':'قەرزت لای ئەم دوکانە نییە، «پارەم وەرگرت» هەڵبژێرە'); return; } }
+      rows.push({id:'r'+id(),type:'ret',shop:name,amount,currency:form.cur,debt:form.debt,date:today(),ts:now});
+      persist(); hideSheet(); render(); toast('گەڕاوە تۆمار کرا ↩'); return;
     }
     rows.push({id:'b'+id(),type:'buy',shop:name,amount,currency:form.cur,debt:form.debt,date:today(),ts:now});
     persist(); hideSheet(); render(); toast('زیاد کرا ✓');
