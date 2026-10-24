@@ -86,6 +86,8 @@ main{padding:16px 16px calc(110px + env(safe-area-inset-bottom,0px));max-width:6
 .row.t-paid{background:var(--cash-bg)}
 .row.t-ret{background:var(--ret-bg)}
 .pill.ret{background:var(--ret-bg);color:var(--ret)}
+:root[data-theme=dark] .avatar.tinted{color:hsl(var(--h) 70% 72%)!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .avatar.tinted{color:hsl(var(--h) 70% 72%)!important}}
 .avatar.k-ret{background:var(--ret-bg);color:var(--ret)}
 .amt.ret{color:var(--ret)}
 
@@ -317,6 +319,14 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   function debtAge(d){ if(d==='0') return 'قەرزی کۆن'; const n=Math.round((Date.parse(today())-Date.parse(d))/864e5); return n<=0?'قەرزی ئەمڕۆ':n===1?'قەرزی دوێنێ':n+' ڕۆژە قەرزە'; }
   // each shop keeps one currency: the currency of its very first entry
   function shopCur(name){ let f=null; for(const r of rows){ if(r.shop!==name) continue; if(!f||(r.ts||0)<(f.ts||0)) f=r; } return f?f.currency:null; }
+  // every shop gets its own color: hues spread by the golden angle in order of first use, so no two match
+  function shopColor(name){
+    const order=[]; const seen=new Set();
+    rows.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(r=>{ if(!seen.has(r.shop)){ seen.add(r.shop); order.push(r.shop); } });
+    const i=Math.max(0,order.indexOf(name)); const h=Math.round((i*137.508+150)%360);
+    return h;
+  }
+  function paintAvatar(a,name){ const h=shopColor(name); a.style.background='hsl('+h+' 70% 50% / .16)'; a.style.color='hsl('+h+' 65% 40%)'; a.classList.add('tinted'); a.style.setProperty('--h',h); return a; }
   function names(){ const m=new Map(); rows.forEach(r=>m.set(r.shop,Math.max(m.get(r.shop)||0,r.ts||0))); return [...m.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]); }
   function totalDebt(){ let i=0,u=0; names().forEach(n=>{const s=summary(n); i+=s.owe.IQD; u+=s.owe.USD;}); return {i,u}; }
 
@@ -329,7 +339,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   function entryRow(r, opts={}){
     const row=el('div','row t-'+kindOf(r)[1]); row.tabIndex=0; row.setAttribute('role','button');
     if(opts.noName){ const k=kindOf(r)[1]; row.appendChild(el('div','avatar k-'+k, k==='paid'?'↓':k==='ret'?'↩':k==='debt'?'!':'✓')); }
-    else row.appendChild(el('div','avatar',(r.shop||'?').trim().charAt(0)));
+    else row.appendChild(paintAvatar(el('div','avatar',(r.shop||'?').trim().charAt(0)),r.shop));
     const mid=el('div','mid');
     mid.appendChild(el('span','name',opts.noName ? kindOf(r)[0] : r.shop));
     const when = r.type==='old' ? prettyDay(r.date) : (opts.showDay ? prettyDay(r.date)+' · ' : '')+timeOf(r.ts||0);
@@ -344,7 +354,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   }
   function nameRow(n, right, rightCls, sub){
     const row=el('div','row'); row.tabIndex=0; row.setAttribute('role','button');
-    row.appendChild(el('div','avatar',n.trim().charAt(0)));
+    row.appendChild(paintAvatar(el('div','avatar',n.trim().charAt(0)),n)); row.style.borderInlineStart='4px solid hsl('+shopColor(n)+' 65% 50%)';
     const mid=el('div','mid'); mid.appendChild(el('span','name',n)); if(sub) mid.appendChild(el('span','meta red',sub)); row.appendChild(mid);
     if(right) row.appendChild(el('span','amt num '+(rightCls||''),right));
     row.appendChild(el('span','chev','‹'));
