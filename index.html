@@ -88,6 +88,10 @@ main{padding:16px 16px calc(110px + env(safe-area-inset-bottom,0px));max-width:6
 .pill.ret{background:var(--ret-bg);color:var(--ret)}
 :root[data-theme=dark] .avatar.tinted{color:hsl(var(--h) 70% 72%)!important}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .avatar.tinted{color:hsl(var(--h) 70% 72%)!important}}
+.row.shoprow{background:hsl(var(--h) 75% 50% / .09)}
+.row.shoprow .avatar{background:hsl(var(--h) 70% 50% / .2)!important}
+:root[data-theme=dark] .row.shoprow{background:hsl(var(--h) 60% 50% / .14)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .row.shoprow{background:hsl(var(--h) 60% 50% / .14)}}
 .avatar.k-ret{background:var(--ret-bg);color:var(--ret)}
 .amt.ret{color:var(--ret)}
 
@@ -354,7 +358,7 @@ input.money{font-size:1.8rem;font-weight:800;text-align:center;padding:10px}
   }
   function nameRow(n, right, rightCls, sub){
     const row=el('div','row'); row.tabIndex=0; row.setAttribute('role','button');
-    row.appendChild(paintAvatar(el('div','avatar',n.trim().charAt(0)),n)); row.style.borderInlineStart='4px solid hsl('+shopColor(n)+' 65% 50%)';
+    row.appendChild(paintAvatar(el('div','avatar',n.trim().charAt(0)),n)); row.classList.add('shoprow'); row.style.setProperty('--h',shopColor(n));
     const mid=el('div','mid'); mid.appendChild(el('span','name',n)); if(sub) mid.appendChild(el('span','meta red',sub)); row.appendChild(mid);
     if(right) row.appendChild(el('span','amt num '+(rightCls||''),right));
     row.appendChild(el('span','chev','‹'));
